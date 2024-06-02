@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const FormScreen = ({ setFormData }) => {
   const [countries, setCountries] = useState([]);
+  const [apiStatus, setApiStatus] = useState('loading'); // Add state for API status
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -16,14 +17,22 @@ const FormScreen = ({ setFormData }) => {
 
   useEffect(() => {
     axios.get('https://restcountries.com/v2/all')
-      .then(response => setCountries(response.data))
-      .catch(error => console.error('Chyba pri načítavaní krajín:', error));
+      .then(response => {
+        setCountries(response.data);
+        setApiStatus('success'); // Set API status to success
+      })
+      .catch(error => {
+        console.error('Error loading countries:', error);
+        setApiStatus('error'); // Set API status to error
+      });
   }, []);
 
   const validateName = name => /^[a-zA-Z\s]+$/.test(name);
   const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const year = parseInt(form.dob.substring(0, 4), 10);
-  const validateDOB = dob => /^\d{4}-\d{2}-\d{2}$/.test(dob)&& year >= 1950 && year <= 2020;  
+  const validateDOB = dob => {
+    const year = parseInt(dob.substring(0, 4), 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(dob) && year >= 1950 && year <= 2020;
+  };
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -56,7 +65,7 @@ const FormScreen = ({ setFormData }) => {
 
     if (!validateDOB(form.dob)) {
       valid = false;
-      newErrors.dob = 'Neplatný dátum narodenia. ';
+      newErrors.dob = 'Neplatný dátum narodenia.';
     }
 
     setErrors(newErrors);
@@ -88,13 +97,19 @@ const FormScreen = ({ setFormData }) => {
         </div>
         <div>
           <label>Krajina:</label>
-          <select name="country" value={form.country} onChange={handleChange} required>
-            <option value="">Vyberte krajinu</option>
-            {countries.map(country => (
-              <option key={country.alpha3Code} value={country.name}>
-                {country.name}
-              </option>
-            ))}
+          <select name="country" value={form.country} onChange={handleChange} required disabled={apiStatus === 'error'}>
+            {apiStatus === 'loading' && <option>Načítavam krajiny...</option>}
+            {apiStatus === 'error' && <option>preťažená api!</option>}
+            {apiStatus === 'success' && (
+              <>
+                <option value="">Vyberte krajinu</option>
+                {countries.map(country => (
+                  <option key={country.alpha3Code} value={country.name}>
+                    {country.name}
+                  </option>
+                ))}
+              </>
+            )}
           </select>
         </div>
         <button type="submit">Potvrdiť</button>
